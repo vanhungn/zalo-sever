@@ -1,32 +1,30 @@
 
 const modelUsers= require('../models/usersModel')
-const validateSchema= require('../help/validate')
 const bcrypt = require('bcrypt')
 const asignToken=require('../help/authorToken')
 const parsePhone=require('../help/parsePhone')
 const RegisterUser=async(req,res)=>{
     try {
         const {name,phone,password}=req.body;
-        const data={
-            phone:phone
-        }
+      
         if(!name||!phone || !password){
             return res.status(300).json({
-                message:'Số điện thoại hoặc mật khẩu chưa điền'
+                message:'Phone number or password not filled in'
             })
         }
        
-        if(validateSchema.validateSchema(data)===false){
-            return res.status(300).json({
-                message:'Số điện thoại không đúng định dạng'
-            })
-        }
+       
         
          const localNumber =await parsePhone(phone)
+         if(!localNumber){
+            return res.status(300).json({
+                message:'The phone number transferred is not in the correct format'
+            })
+        }
          const checkPhone= await modelUsers.findOne({phone:localNumber})
          if(checkPhone!==null){
             return res.status(301).json({
-                message:'Số điện thoại đã tồn tại'
+                message:'Phone number already exists'
             })
          }
          const salt = bcrypt.genSaltSync(10);
@@ -57,22 +55,27 @@ const LoginUser=async(req,res)=>{
         const{phone,password}=req.body
         if(!phone ||!password){
             return res.status(300).json({
-                message:'Bạn vui lòng điền số điện thoại và mật khẩu'
+                message:'Please enter your phone number and password'
             })
         }
         const localNumber =await parsePhone(phone)
+        if(!localNumber){
+            return res.status(300).json({
+                message:'The phone number transferred is not in the correct format'
+            })
+        }
         const hashPassword= await modelUsers.findOne({phone:localNumber})
         const comparePassword= await bcrypt.compare(password,hashPassword.password)
         const token = await asignToken({name:hashPassword.name,phone:hashPassword.phone,_id:hashPassword._id},"5h")
         if(hashPassword===null)
         {
             return res.status(300).json({
-                message:'Số điện thoại chưa tồn tại'
+                message:'Phone number does not exist'
             })
         }
         if(!comparePassword){
             return res.status(300).json({
-                message:'Mật khẩu không đúng'
+                message:'Incorrect password'
             })
         }
         return res.status(200).json({
